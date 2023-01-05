@@ -67,12 +67,25 @@ async function run(): Promise<void> {
                     core.info(`Behind by ${comparison.behind_by} commits`)
                 }
 
+                const prEvents = await octokit.paginate(octokit.issues.listEvents, {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                })
+
                 const prComments = await octokit.paginate(octokit.issues.listComments, {
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: pr.number,
                 })
-                core.info(JSON.stringify(prComments, null, 2))
+
+                const prAllEvents = [...prEvents, ...prComments]
+                    .sort((o1, o2) => {
+                        const createdAt1 = new Date(o1.created_at || '')
+                        const createdAt2 = new Date(o2.created_at || '')
+                        return createdAt1.getTime() - createdAt2.getTime()
+                    })
+                core.info(JSON.stringify(prAllEvents, null, 2))
             })
         }
 
