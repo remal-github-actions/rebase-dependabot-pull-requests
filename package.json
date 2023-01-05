@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package",
-  "name": "template-typescript",
+  "name": "rebase-dependabot-pull-requests",
   "version": "1.0.0",
   "engines": {
     "node": ">=16"
