@@ -1,2 +1,1 @@
-# template-typescript
-Template repository for GitHub typescript actions
+# rebase-dependabot-pull-requests
