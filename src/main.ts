@@ -66,8 +66,13 @@ async function run(): Promise<void> {
                 } else {
                     core.info(`Behind by ${comparison.behind_by} commits`)
                 }
-                
 
+                const prComments = await octokit.paginate(octokit.issues.listComments, {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                })
+                core.info(JSON.stringify(prComments, null, 2))
             })
         }
 
