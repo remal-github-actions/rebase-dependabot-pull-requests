@@ -50,3 +50,6 @@
 
 # Remal GitHub actions:
 /dist/** -diff linguist-generated=true
+
+# Remal GitHub actions:
+/dist/** -diff linguist-generated=true
