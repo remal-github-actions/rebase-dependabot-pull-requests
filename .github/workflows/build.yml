@@ -88,7 +88,6 @@ jobs:
       uses: ./
       with:
         dryRun: 'true'
-        githubToken: ${{secrets.PUSH_BACK_TOKEN}}
 
     # $$$sync-with-template-modifiable-end$$$
 
