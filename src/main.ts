@@ -30,7 +30,7 @@ async function run(): Promise<void> {
             const dependabotPrs = allPrs
                 .filter(pr => pr.user != null && dependabotUsers.includes(pr.user.login))
                 .filter(pr => !pr.locked)
-            dependabotPrs.forEach(pr => core.info(pr.html_url))
+            dependabotPrs.forEach(pr => core.info(`${pr.html_url} - ${pr.title}`))
             return dependabotPrs
         })
 
@@ -85,7 +85,7 @@ async function run(): Promise<void> {
                 }
 
                 if (dryRun) {
-                    core.warning(`Skipping posting rebase action comment, as dry run is enabled`)
+                    core.warning(`Skipping posting \`${rebaseComment}\` comment, as dry run is enabled`)
                     return
                 }
 
