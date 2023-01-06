@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import { context } from '@actions/github'
 import { newOctokitInstance } from './internal/octokit'
-import { IssueComment, IssueEvent, PullRequestSimple } from './internal/types'
+import { IssueComment, IssueEvent, PullRequest, PullRequestSimple } from './internal/types'
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,16 +21,26 @@ const rebaseComment = '@dependabot rebase'
 
 async function run(): Promise<void> {
     try {
-        const prs: PullRequestSimple[] = await core.group('Retrieving Dependabot open PRs', async () => {
-            const allPrs: PullRequestSimple[] = await octokit.paginate(octokit.pulls.list, {
+        const prs: PullRequest[] = await core.group('Retrieving Dependabot open PRs', async () => {
+            const allSimplePrs: PullRequestSimple[] = await octokit.paginate(octokit.pulls.list, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'open',
             })
-            const dependabotPrs = allPrs
+            const dependabotSimplePrs = allSimplePrs
                 .filter(pr => pr.user != null && dependabotUsers.includes(pr.user.login))
                 .filter(pr => !pr.locked)
-            dependabotPrs.forEach(pr => core.info(`${pr.html_url} - ${pr.title}`))
+
+            const dependabotPrs: PullRequest[] = []
+            for (const simplePr of dependabotSimplePrs) {
+                core.info(`${simplePr.html_url} - ${simplePr.title}`)
+                const pr = await octokit.pulls.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: simplePr.number,
+                }).then(it => it.data)
+                dependabotPrs.push(pr)
+            }
             return dependabotPrs
         })
 
@@ -50,6 +60,7 @@ async function run(): Promise<void> {
                 } else {
                     core.info(`Behind by ${comparison.behind_by} commits`)
                 }
+
 
                 const prEvents = await octokit.paginate(octokit.issues.listEvents, {
                     owner: context.repo.owner,
@@ -75,7 +86,7 @@ async function run(): Promise<void> {
                     const comment = ((prEvent as IssueComment).body || '').trim()
 
                     if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
-                        return
+                        break
                     }
 
                     if (dependabotUsers.includes(login) && comment.match(/(`|\b)@dependabot recreate(\b|`)/)) {
@@ -83,6 +94,7 @@ async function run(): Promise<void> {
                         return
                     }
                 }
+
 
                 if (dryRun) {
                     core.warning(`Skipping posting \`${rebaseComment}\` comment, as dry run is enabled`)
@@ -97,8 +109,6 @@ async function run(): Promise<void> {
                 })
             })
         }
-
-        throw new Error('draft')
 
     } catch (error) {
         core.setFailed(error instanceof Error ? error : (error as object).toString())
