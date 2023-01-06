@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import { context } from '@actions/github'
 import { newOctokitInstance } from './internal/octokit'
-import { PullRequest, PullRequestSimple } from './internal/types'
+import { IssueComment, IssueEvent, PullRequest, PullRequestSimple } from './internal/types'
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -51,7 +51,7 @@ async function run(): Promise<void> {
         })
 
         for (const pr of prs) {
-            await core.group(`Processing ${pr.title}`, async () => {
+            await core.group(`Processing "${pr.title}"`, async () => {
                 const comparison = await octokit.repos.compareCommits({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -79,15 +79,31 @@ async function run(): Promise<void> {
                     issue_number: pr.number,
                 })
 
-                const prAllEvents = [...prEvents, ...prComments]
+                const prAllEvents: (IssueEvent | IssueComment)[] = [...prEvents, ...prComments]
                     .sort((o1, o2) => {
                         const createdAt1 = new Date(o1.created_at || '')
                         const createdAt2 = new Date(o2.created_at || '')
-                        return createdAt1.getTime() - createdAt2.getTime()
+                        return -1 * (createdAt1.getTime() - createdAt2.getTime())
                     })
                 core.info(JSON.stringify(prAllEvents, null, 2))
+                for (const prEvent of prAllEvents) {
+                    const login = (prEvent as IssueEvent).actor?.login || (prEvent as IssueComment).user?.login || ''
+                    const event = (prEvent as IssueEvent).event || 'comment'
+                    const comment = (prEvent as IssueComment).body || ''
+
+                    if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
+                        break
+                    }
+
+                    if (dependabotUsers.includes(login) && comment.match(/\b@dependabot recreate\b/)) {
+                        core.warning(comment)
+                        return
+                    }
+                }
             })
         }
+
+        throw new Error('draft')
 
     } catch (error) {
         core.setFailed(error instanceof Error ? error : (error as object).toString())
