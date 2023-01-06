@@ -79,8 +79,8 @@ async function run(): Promise<void> {
                         break
                     }
 
-                    if (dependabotUsers.includes(login) && comment.match(/\b@dependabot recreate\b/)) {
-                        core.warning(comment)
+                    if (dependabotUsers.includes(login) && comment.match(/[\s\S]*\b@dependabot recreate\b[\s\S]*/)) {
+                        core.warning(comment.trim().split(/[\r\n]+/)[0])
                         return
                     }
                 }
