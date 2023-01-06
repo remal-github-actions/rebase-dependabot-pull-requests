@@ -15,6 +15,8 @@ const dependabotUsers = [
     'dependabot[bot]',
 ]
 
+const rebaseComment = '@dependabot rebase'
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 async function run(): Promise<void> {
@@ -71,6 +73,8 @@ async function run(): Promise<void> {
                     const event = (prEvent as IssueEvent).event || 'comment'
                     const comment = ((prEvent as IssueComment).body || '').trim()
 
+                    core.info(`dependabotUsers.includes(login)=${dependabotUsers.includes(login)}`)
+
                     if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
                         return
                     }
@@ -81,15 +85,17 @@ async function run(): Promise<void> {
                     }
                 }
 
-                const postComment = false
-                if (postComment) {
-                    await octokit.issues.createComment({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        issue_number: pr.number,
-                        body: '@dependabot rebase',
-                    })
+                if (dryRun) {
+                    core.warning(`Skipping posting rebase action comment, as dry run is enabled`)
+                    return
                 }
+
+                await octokit.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    body: rebaseComment,
+                })
             })
         }
 
