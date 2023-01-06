@@ -198,6 +198,7 @@ async function run() {
                     core.warning(`Skipping posting \`${rebaseComment}\` comment, as dry run is enabled`);
                     return;
                 }
+                core.info(`Posting \`${rebaseComment}\` comment`);
                 await octokit.issues.createComment({
                     owner: github_1.context.repo.owner,
                     repo: github_1.context.repo.repo,
