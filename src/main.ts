@@ -20,15 +20,15 @@ const dependabotUsers = [
 async function run(): Promise<void> {
     try {
         const prs: PullRequestSimple[] = await core.group('Retrieving Dependabot open PRs', async () => {
-            const allSimplePrs: PullRequestSimple[] = await octokit.paginate(octokit.pulls.list, {
+            const allPrs: PullRequestSimple[] = await octokit.paginate(octokit.pulls.list, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'open',
             })
-            const dependabotSimplePrs = allSimplePrs
+            const dependabotPrs = allPrs
                 .filter(pr => pr.user != null && dependabotUsers.includes(pr.user.login))
                 .filter(pr => !pr.locked)
-            return dependabotSimplePrs
+            return dependabotPrs
         })
 
         for (const pr of prs) {
@@ -66,11 +66,14 @@ async function run(): Promise<void> {
                         const createdAt2 = new Date(o2.created_at || '')
                         return -1 * (createdAt1.getTime() - createdAt2.getTime())
                     })
-                core.info(JSON.stringify(prAllEvents, null, 2))
                 for (const prEvent of prAllEvents) {
+                    core.info(JSON.stringify(prEvent, null, 2))
                     const login = (prEvent as IssueEvent).actor?.login || (prEvent as IssueComment).user?.login || ''
+                    core.info(`  login=${login}`)
                     const event = (prEvent as IssueEvent).event || 'comment'
+                    core.info(`  event=${event}`)
                     const comment = (prEvent as IssueComment).body || ''
+                    core.info(`  comment=${comment}`)
 
                     if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
                         break
