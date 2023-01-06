@@ -74,15 +74,11 @@ async function run(): Promise<void> {
                     const event = (prEvent as IssueEvent).event || 'comment'
                     const comment = ((prEvent as IssueComment).body || '').trim()
 
-                    core.info(`dependabotUsers.includes(login)=${dependabotUsers.includes(login)}`)
-                    core.info(`comment.match(/[\\s\\S]*\\b@dependabot recreate\\b[\\s\\S]*/)=${comment.match(
-                        /[\s\S]*\b@dependabot recreate\b[\s\S]*/)}`)
-
                     if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
                         return
                     }
 
-                    if (dependabotUsers.includes(login) && comment.match(/[\s\S]*\b@dependabot recreate\b[\s\S]*/)) {
+                    if (dependabotUsers.includes(login) && comment.match(/(`|\b)@dependabot recreate(\b|`)/)) {
                         core.warning(comment.split(/[\r\n]+/)[0].trim())
                         return
                     }
