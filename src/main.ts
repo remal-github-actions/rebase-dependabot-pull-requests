@@ -67,22 +67,28 @@ async function run(): Promise<void> {
                         return -1 * (createdAt1.getTime() - createdAt2.getTime())
                     })
                 for (const prEvent of prAllEvents) {
-                    core.info(JSON.stringify(prEvent, null, 2))
                     const login = (prEvent as IssueEvent).actor?.login || (prEvent as IssueComment).user?.login || ''
-                    core.info(`  login=${login}`)
                     const event = (prEvent as IssueEvent).event || 'comment'
-                    core.info(`  event=${event}`)
-                    const comment = (prEvent as IssueComment).body || ''
-                    core.info(`  comment=${comment}`)
+                    const comment = ((prEvent as IssueComment).body || '').trim()
 
                     if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
-                        break
+                        return
                     }
 
                     if (dependabotUsers.includes(login) && comment.match(/[\s\S]*\b@dependabot recreate\b[\s\S]*/)) {
-                        core.warning(comment.trim().split(/[\r\n]+/)[0])
+                        core.warning(comment.split(/[\r\n]+/)[0].trim())
                         return
                     }
+                }
+
+                const postComment = false
+                if (postComment) {
+                    await octokit.issues.createComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: pr.number,
+                        body: '@dependabot rebase',
+                    })
                 }
             })
         }
