@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import { context } from '@actions/github'
 import { newOctokitInstance } from './internal/octokit'
-import { IssueComment, IssueEvent, PullRequest, PullRequestSimple } from './internal/types'
+import { IssueComment, IssueEvent, PullRequestSimple } from './internal/types'
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,7 +19,7 @@ const dependabotUsers = [
 
 async function run(): Promise<void> {
     try {
-        const prs: PullRequest[] = await core.group('Retrieving Dependabot open PRs', async () => {
+        const prs: PullRequestSimple[] = await core.group('Retrieving Dependabot open PRs', async () => {
             const allSimplePrs: PullRequestSimple[] = await octokit.paginate(octokit.pulls.list, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -28,26 +28,7 @@ async function run(): Promise<void> {
             const dependabotSimplePrs = allSimplePrs
                 .filter(pr => pr.user != null && dependabotUsers.includes(pr.user.login))
                 .filter(pr => !pr.locked)
-
-            const dependabotPrs: PullRequest[] = []
-            for (const pr of dependabotSimplePrs) {
-                const fullPr: PullRequest = await octokit.pulls.get({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    pull_number: pr.number,
-                }).then(it => it.data)
-                dependabotPrs.push(fullPr)
-            }
-            const dependabotRebaseablePrs: PullRequest[] = []
-            dependabotPrs.forEach(pr => {
-                if (pr.rebaseable) {
-                    dependabotRebaseablePrs.push(pr)
-                    core.info(pr.html_url)
-                } else {
-                    core.info(`${pr.html_url} - not rebaseable`)
-                }
-            })
-            return dependabotRebaseablePrs
+            return dependabotSimplePrs
         })
 
         for (const pr of prs) {
