@@ -3,7 +3,7 @@ name: Rebase Dependabot pull requests
 on:
   push:
     paths:
-    - '.github/rebase-dependabot-pull-requests.yml'
+    - '.github/workflows/rebase-dependabot-pull-requests.yml'
     branches:
     - 'main'
     - 'master'
