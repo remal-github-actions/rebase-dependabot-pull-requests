@@ -125,6 +125,7 @@ const dependabotUsers = [
     'dependabot',
     'dependabot[bot]',
 ];
+const rebaseComment = '@dependabot rebase';
 async function run() {
     try {
         const prs = await core.group('Retrieving Dependabot open PRs', async () => {
@@ -137,28 +138,20 @@ async function run() {
                 .filter(pr => pr.user != null && dependabotUsers.includes(pr.user.login))
                 .filter(pr => !pr.locked);
             const dependabotPrs = [];
-            for (const pr of dependabotSimplePrs) {
-                const fullPr = await octokit.pulls.get({
+            for (const simplePr of dependabotSimplePrs) {
+                core.info(`${simplePr.html_url} - ${simplePr.title}`);
+                const pr = await octokit.pulls.get({
                     owner: github_1.context.repo.owner,
                     repo: github_1.context.repo.repo,
-                    pull_number: pr.number,
+                    pull_number: simplePr.number,
                 }).then(it => it.data);
-                dependabotPrs.push(fullPr);
+                dependabotPrs.push(pr);
             }
-            const dependabotRebaseablePrs = [];
-            dependabotPrs.forEach(pr => {
-                if (pr.rebaseable) {
-                    dependabotRebaseablePrs.push(pr);
-                    core.info(pr.html_url);
-                }
-                else {
-                    core.info(`${pr.html_url} - not rebaseable`);
-                }
-            });
-            return dependabotRebaseablePrs;
+            return dependabotPrs;
         });
         for (const pr of prs) {
-            await core.group(`Processing ${pr.title}`, async () => {
+            await core.group(`Processing "${pr.title}"`, async () => {
+                var _a, _b;
                 const comparison = await octokit.repos.compareCommits({
                     owner: github_1.context.repo.owner,
                     repo: github_1.context.repo.repo,
@@ -187,9 +180,30 @@ async function run() {
                     .sort((o1, o2) => {
                     const createdAt1 = new Date(o1.created_at || '');
                     const createdAt2 = new Date(o2.created_at || '');
-                    return createdAt1.getTime() - createdAt2.getTime();
+                    return -1 * (createdAt1.getTime() - createdAt2.getTime());
                 });
-                core.info(JSON.stringify(prAllEvents, null, 2));
+                for (const prEvent of prAllEvents) {
+                    const login = ((_a = prEvent.actor) === null || _a === void 0 ? void 0 : _a.login) || ((_b = prEvent.user) === null || _b === void 0 ? void 0 : _b.login) || '';
+                    const event = prEvent.event || 'comment';
+                    const comment = (prEvent.body || '').trim();
+                    if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
+                        break;
+                    }
+                    if (dependabotUsers.includes(login) && comment.match(/(`|\b)@dependabot recreate(\b|`)/)) {
+                        core.warning(comment.split(/[\r\n]+/)[0].trim());
+                        return;
+                    }
+                }
+                if (dryRun) {
+                    core.warning(`Skipping posting \`${rebaseComment}\` comment, as dry run is enabled`);
+                    return;
+                }
+                await octokit.issues.createComment({
+                    owner: github_1.context.repo.owner,
+                    repo: github_1.context.repo.repo,
+                    issue_number: pr.number,
+                    body: rebaseComment,
+                });
             });
         }
     }
