@@ -101,6 +101,7 @@ async function run(): Promise<void> {
                     return
                 }
 
+                core.info(`Posting \`${rebaseComment}\` comment`)
                 await octokit.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
