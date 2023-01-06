@@ -30,6 +30,7 @@ async function run(): Promise<void> {
             const dependabotPrs = allPrs
                 .filter(pr => pr.user != null && dependabotUsers.includes(pr.user.login))
                 .filter(pr => !pr.locked)
+            dependabotPrs.forEach(pr => core.info(pr.html_url))
             return dependabotPrs
         })
 
@@ -74,6 +75,8 @@ async function run(): Promise<void> {
                     const comment = ((prEvent as IssueComment).body || '').trim()
 
                     core.info(`dependabotUsers.includes(login)=${dependabotUsers.includes(login)}`)
+                    core.info(`comment.match(/[\\s\\S]*\\b@dependabot recreate\\b[\\s\\S]*/)=${comment.match(
+                        /[\s\S]*\b@dependabot recreate\b[\s\S]*/)}`)
 
                     if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
                         return
