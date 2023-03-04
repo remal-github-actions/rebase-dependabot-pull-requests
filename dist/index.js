@@ -4389,7 +4389,7 @@ async function requestWithGraphqlErrorHandling(state, octokit, request, options)
   return response;
 }
 
-const VERSION = "4.1.2";
+const VERSION = "4.1.3";
 function retry(octokit, octokitOptions) {
   const state = Object.assign({
     enabled: true,
