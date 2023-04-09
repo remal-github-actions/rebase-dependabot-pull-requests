@@ -151,7 +151,6 @@ async function run() {
         });
         for (const pr of prs) {
             await core.group(`Processing "${pr.title}"`, async () => {
-                var _a, _b;
                 const comparison = await octokit.repos.compareCommits({
                     owner: github_1.context.repo.owner,
                     repo: github_1.context.repo.repo,
@@ -183,7 +182,7 @@ async function run() {
                     return -1 * (createdAt1.getTime() - createdAt2.getTime());
                 });
                 for (const prEvent of prAllEvents) {
-                    const login = ((_a = prEvent.actor) === null || _a === void 0 ? void 0 : _a.login) || ((_b = prEvent.user) === null || _b === void 0 ? void 0 : _b.login) || '';
+                    const login = prEvent.actor?.login || prEvent.user?.login || '';
                     const event = prEvent.event || 'comment';
                     const comment = (prEvent.body || '').trim();
                     if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
