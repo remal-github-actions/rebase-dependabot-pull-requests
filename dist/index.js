@@ -1,226 +1,6 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 8093:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.newOctokitInstance = void 0;
-const core = __importStar(__nccwpck_require__(2186));
-const utils_1 = __nccwpck_require__(3030);
-const plugin_request_log_1 = __nccwpck_require__(8883);
-const plugin_retry_1 = __nccwpck_require__(6298);
-const plugin_throttling_1 = __nccwpck_require__(9968);
-const OctokitWithPlugins = utils_1.GitHub
-    .plugin(plugin_retry_1.retry)
-    .plugin(plugin_throttling_1.throttling)
-    .plugin(plugin_request_log_1.requestLog)
-    .defaults({
-    previews: [
-        'baptiste',
-        'mercy',
-    ],
-});
-function newOctokitInstance(token) {
-    const baseOptions = (0, utils_1.getOctokitOptions)(token);
-    const throttleOptions = {
-        throttle: {
-            onRateLimit: (retryAfter, options) => {
-                const retryCount = options.request.retryCount;
-                const retryLogInfo = retryCount === 0 ? '' : ` (retry #${retryCount})`;
-                core.debug(`Request quota exhausted for request ${options.method} ${options.url}${retryLogInfo}`);
-                return retryCount <= 4;
-            },
-            onSecondaryRateLimit: (retryAfter, options) => {
-                core.error(`Abuse detected for request ${options.method} ${options.url}`);
-                return false;
-            },
-        },
-    };
-    const retryOptions = {
-        retry: {
-            doNotRetry: ['429'],
-        },
-    };
-    const logOptions = {};
-    const traceLogging = __nccwpck_require__(385)({ level: 'trace' });
-    if (core.isDebug()) {
-        logOptions.log = traceLogging;
-    }
-    const allOptions = {
-        ...baseOptions,
-        ...throttleOptions,
-        ...retryOptions,
-        ...logOptions,
-    };
-    const octokit = new OctokitWithPlugins(allOptions);
-    const client = {
-        ...octokit.rest,
-        paginate: octokit.paginate,
-    };
-    return client;
-}
-exports.newOctokitInstance = newOctokitInstance;
-
-
-/***/ }),
-
-/***/ 9538:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core = __importStar(__nccwpck_require__(2186));
-const github_1 = __nccwpck_require__(5438);
-const octokit_1 = __nccwpck_require__(8093);
-const githubToken = core.getInput('githubToken', { required: true });
-const dryRun = core.getInput('dryRun', { required: true }).toLowerCase() === 'true';
-const octokit = (0, octokit_1.newOctokitInstance)(githubToken);
-const dependabotUsers = [
-    'dependabot',
-    'dependabot[bot]',
-];
-const rebaseComment = '@dependabot rebase';
-async function run() {
-    try {
-        const prs = await core.group('Retrieving Dependabot open PRs', async () => {
-            const allSimplePrs = await octokit.paginate(octokit.pulls.list, {
-                owner: github_1.context.repo.owner,
-                repo: github_1.context.repo.repo,
-                state: 'open',
-            });
-            const dependabotSimplePrs = allSimplePrs
-                .filter(pr => pr.user != null && dependabotUsers.includes(pr.user.login))
-                .filter(pr => !pr.locked);
-            const dependabotPrs = [];
-            for (const simplePr of dependabotSimplePrs) {
-                core.info(`${simplePr.html_url} - ${simplePr.title}`);
-                const pr = await octokit.pulls.get({
-                    owner: github_1.context.repo.owner,
-                    repo: github_1.context.repo.repo,
-                    pull_number: simplePr.number,
-                }).then(it => it.data);
-                dependabotPrs.push(pr);
-            }
-            return dependabotPrs;
-        });
-        for (const pr of prs) {
-            await core.group(`Processing "${pr.title}"`, async () => {
-                const comparison = await octokit.repos.compareCommits({
-                    owner: github_1.context.repo.owner,
-                    repo: github_1.context.repo.repo,
-                    base: pr.base.ref,
-                    head: pr.head.sha,
-                    per_page: 1,
-                }).then(it => it.data);
-                if (comparison.behind_by === 0) {
-                    core.info('Up-to-date');
-                    return;
-                }
-                else {
-                    core.info(`Behind by ${comparison.behind_by} commits`);
-                }
-                const prEvents = await octokit.paginate(octokit.issues.listEvents, {
-                    owner: github_1.context.repo.owner,
-                    repo: github_1.context.repo.repo,
-                    issue_number: pr.number,
-                });
-                const prComments = await octokit.paginate(octokit.issues.listComments, {
-                    owner: github_1.context.repo.owner,
-                    repo: github_1.context.repo.repo,
-                    issue_number: pr.number,
-                });
-                const prAllEvents = [...prEvents, ...prComments]
-                    .sort((o1, o2) => {
-                    const createdAt1 = new Date(o1.created_at || '');
-                    const createdAt2 = new Date(o2.created_at || '');
-                    return -1 * (createdAt1.getTime() - createdAt2.getTime());
-                });
-                for (const prEvent of prAllEvents) {
-                    const login = prEvent.actor?.login || prEvent.user?.login || '';
-                    const event = prEvent.event || 'comment';
-                    const comment = (prEvent.body || '').trim();
-                    if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
-                        break;
-                    }
-                    if (dependabotUsers.includes(login) && comment.match(/(`|\b)@dependabot recreate(\b|`)/)) {
-                        core.warning(comment.split(/[\r\n]+/)[0].trim());
-                        return;
-                    }
-                }
-                if (dryRun) {
-                    core.warning(`Skipping posting \`${rebaseComment}\` comment, as dry run is enabled`);
-                    return;
-                }
-                core.info(`Posting \`${rebaseComment}\` comment`);
-                await octokit.issues.createComment({
-                    owner: github_1.context.repo.owner,
-                    repo: github_1.context.repo.repo,
-                    issue_number: pr.number,
-                    body: rebaseComment,
-                });
-            });
-        }
-    }
-    catch (error) {
-        core.setFailed(error instanceof Error ? error : error.toString());
-        throw error;
-    }
-}
-run();
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -33407,17 +33187,198 @@ module.exports = require("zlib");
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__nccwpck_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/compat */
 /******/ 	
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(9538);
-/******/ 	module.exports = __webpack_exports__;
-/******/ 	
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
+"use strict";
+// ESM COMPAT FLAG
+__nccwpck_require__.r(__webpack_exports__);
+
+// EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
+var core = __nccwpck_require__(2186);
+// EXTERNAL MODULE: ./node_modules/@actions/github/lib/github.js
+var github = __nccwpck_require__(5438);
+// EXTERNAL MODULE: ./node_modules/@actions/github/lib/utils.js
+var utils = __nccwpck_require__(3030);
+// EXTERNAL MODULE: ./node_modules/@octokit/plugin-request-log/dist-node/index.js
+var dist_node = __nccwpck_require__(8883);
+// EXTERNAL MODULE: ./node_modules/@octokit/plugin-retry/dist-node/index.js
+var plugin_retry_dist_node = __nccwpck_require__(6298);
+// EXTERNAL MODULE: ./node_modules/@octokit/plugin-throttling/dist-node/index.js
+var plugin_throttling_dist_node = __nccwpck_require__(9968);
+;// CONCATENATED MODULE: ./build/internal/octokit.js
+
+
+
+
+
+const OctokitWithPlugins = utils.GitHub.plugin(plugin_retry_dist_node.retry)
+    .plugin(plugin_throttling_dist_node.throttling)
+    .plugin(dist_node.requestLog)
+    .defaults({
+    previews: [
+        'baptiste',
+        'mercy',
+    ],
+});
+function newOctokitInstance(token) {
+    const baseOptions = (0,utils.getOctokitOptions)(token);
+    const throttleOptions = {
+        throttle: {
+            onRateLimit: (retryAfter, options) => {
+                const retryCount = options.request.retryCount;
+                const retryLogInfo = retryCount === 0 ? '' : ` (retry #${retryCount})`;
+                core.debug(`Request quota exhausted for request ${options.method} ${options.url}${retryLogInfo}`);
+                return retryCount <= 4;
+            },
+            onSecondaryRateLimit: (retryAfter, options) => {
+                core.error(`Abuse detected for request ${options.method} ${options.url}`);
+                return false;
+            },
+        },
+    };
+    const retryOptions = {
+        retry: {
+            doNotRetry: ['429'],
+        },
+    };
+    const logOptions = {};
+    const traceLogging = __nccwpck_require__(385)({ level: 'trace' });
+    if (core.isDebug()) {
+        logOptions.log = traceLogging;
+    }
+    const allOptions = {
+        ...baseOptions,
+        ...throttleOptions,
+        ...retryOptions,
+        ...logOptions,
+    };
+    const octokit = new OctokitWithPlugins(allOptions);
+    const client = {
+        ...octokit.rest,
+        paginate: octokit.paginate,
+    };
+    return client;
+}
+
+;// CONCATENATED MODULE: ./build/main.js
+
+
+
+const githubToken = core.getInput('githubToken', { required: true });
+const dryRun = core.getInput('dryRun', { required: true }).toLowerCase() === 'true';
+const octokit = newOctokitInstance(githubToken);
+const dependabotUsers = [
+    'dependabot',
+    'dependabot[bot]',
+];
+const rebaseComment = '@dependabot rebase';
+async function run() {
+    try {
+        const prs = await core.group('Retrieving Dependabot open PRs', async () => {
+            const allSimplePrs = await octokit.paginate(octokit.pulls.list, {
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                state: 'open',
+            });
+            const dependabotSimplePrs = allSimplePrs
+                .filter(pr => pr.user != null && dependabotUsers.includes(pr.user.login))
+                .filter(pr => !pr.locked);
+            const dependabotPrs = [];
+            for (const simplePr of dependabotSimplePrs) {
+                core.info(`${simplePr.html_url} - ${simplePr.title}`);
+                const pr = await octokit.pulls.get({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    pull_number: simplePr.number,
+                }).then(it => it.data);
+                dependabotPrs.push(pr);
+            }
+            return dependabotPrs;
+        });
+        for (const pr of prs) {
+            await core.group(`Processing "${pr.title}"`, async () => {
+                const comparison = await octokit.repos.compareCommits({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    base: pr.base.ref,
+                    head: pr.head.sha,
+                    per_page: 1,
+                }).then(it => it.data);
+                if (comparison.behind_by === 0) {
+                    core.info('Up-to-date');
+                    return;
+                }
+                else {
+                    core.info(`Behind by ${comparison.behind_by} commits`);
+                }
+                const prEvents = await octokit.paginate(octokit.issues.listEvents, {
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    issue_number: pr.number,
+                });
+                const prComments = await octokit.paginate(octokit.issues.listComments, {
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    issue_number: pr.number,
+                });
+                const prAllEvents = [...prEvents, ...prComments]
+                    .sort((o1, o2) => {
+                    const createdAt1 = new Date(o1.created_at || '');
+                    const createdAt2 = new Date(o2.created_at || '');
+                    return -1 * (createdAt1.getTime() - createdAt2.getTime());
+                });
+                for (const prEvent of prAllEvents) {
+                    const login = prEvent.actor?.login || prEvent.user?.login || '';
+                    const event = prEvent.event || 'comment';
+                    const comment = (prEvent.body || '').trim();
+                    if (dependabotUsers.includes(login) && event === 'head_ref_force_pushed') {
+                        break;
+                    }
+                    if (dependabotUsers.includes(login) && comment.match(/(`|\b)@dependabot recreate(\b|`)/)) {
+                        core.warning(comment.split(/[\r\n]+/)[0].trim());
+                        return;
+                    }
+                }
+                if (dryRun) {
+                    core.warning(`Skipping posting \`${rebaseComment}\` comment, as dry run is enabled`);
+                    return;
+                }
+                core.info(`Posting \`${rebaseComment}\` comment`);
+                await octokit.issues.createComment({
+                    owner: github.context.repo.owner,
+                    repo: github.context.repo.repo,
+                    issue_number: pr.number,
+                    body: rebaseComment,
+                });
+            });
+        }
+    }
+    catch (error) {
+        core.setFailed(error instanceof Error ? error : error.toString());
+        throw error;
+    }
+}
+run();
+
+})();
+
+module.exports = __webpack_exports__;
 /******/ })()
 ;
