@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import { context } from '@actions/github'
-import { newOctokitInstance } from './internal/octokit'
-import { IssueComment, IssueEvent, PullRequest, PullRequestSimple } from './internal/types'
+import { newOctokitInstance } from './internal/octokit.js'
+import { IssueComment, IssueEvent, PullRequest, PullRequestSimple } from './internal/types.js'
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
