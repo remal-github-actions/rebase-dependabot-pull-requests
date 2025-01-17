@@ -6,7 +6,7 @@ import { IssueComment, IssueEvent, PullRequest, PullRequestSimple } from './inte
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 const githubToken = core.getInput('githubToken', { required: true })
-const dryRun = core.getInput('dryRun', { required: true }).toLowerCase() === 'true'
+const dryRun = core.getInput('dryRun', { required: false }).toLowerCase() === 'true'
 
 const octokit = newOctokitInstance(githubToken)
 
