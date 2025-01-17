@@ -37901,7 +37901,7 @@ async function run() {
         }
     }
     catch (error) {
-        core.setFailed(error instanceof Error ? error : error.toString());
+        core.setFailed(error instanceof Error ? error : `${error}`);
         throw error;
     }
 }
