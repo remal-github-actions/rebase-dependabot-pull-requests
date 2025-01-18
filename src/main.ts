@@ -38,7 +38,7 @@ async function run(): Promise<void> {
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     pull_number: simplePr.number,
-                }).then(it => it.data)
+                }).then(it => it.data as PullRequest)
                 dependabotPrs.push(pr)
             }
             return dependabotPrs
