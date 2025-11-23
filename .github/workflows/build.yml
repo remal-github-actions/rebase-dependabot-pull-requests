@@ -26,6 +26,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v6
       with:
+        token: ${{secrets.PUSH_BACK_TOKEN}}
         submodules: recursive
         lfs: true
         fetch-depth: 1
@@ -128,13 +129,14 @@ jobs:
 
 
     - name: Push back
-      env:
-        PUSH_BACK_TOKEN: ${{secrets.PUSH_BACK_TOKEN}}
-      if: ${{github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') && env.PUSH_BACK_TOKEN}}
-      uses: remal-github-actions/push-back@v1
-      with:
-        githubToken: ${{env.PUSH_BACK_TOKEN}}
-        message: '[push-back] Push-back updated files during build'
+      if: ${{github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')}}
+      run: |
+        git config user.name "${{github.triggering_actor}}"
+        git config user.email "${{github.triggering_actor}}@users.noreply.github.com"
+        git add --all || exit 1
+        git commit -m '[push-back] Push-back updated files during build'
+        # || echo "No changes to commit" && exit 0
+        git push origin HEAD:${GITHUB_REF}
 
 
     - name: Read version
