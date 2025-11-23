@@ -130,13 +130,9 @@ jobs:
 
     - name: Push back
       if: ${{github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')}}
-      run: |
-        git config user.name "${{github.triggering_actor}}"
-        git config user.email "${{github.triggering_actor}}@users.noreply.github.com"
-        git add --all || exit 1
-        git commit -m '[push-back] Push-back updated files during build'
-        # || echo "No changes to commit" && exit 0
-        git push origin HEAD:${GITHUB_REF}
+      uses: remal-github-actions/push-back@v2
+      with:
+        message: '[push-back] Push-back updated files during build'
 
 
     - name: Read version
@@ -145,11 +141,6 @@ jobs:
       uses: remal-github-actions/read-nodejs-package-version@v1
 
     - name: Create tag
-      env:
-        PUSH_BACK_TOKEN: ${{secrets.PUSH_BACK_TOKEN}}
-      if: ${{github.event_name == 'push' && github.ref == 'refs/heads/main' && env.PUSH_BACK_TOKEN}}
       uses: remal-github-actions/create-tag@v2
       with:
-        githubToken: ${{env.PUSH_BACK_TOKEN}}
         tagName: 'v${{steps.readVersion.outputs.majorVersion}}'
-        forcePush: 'true'
