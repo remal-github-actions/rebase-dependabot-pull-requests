@@ -24,7 +24,7 @@
     "console-log-level": "1.4.1"
   },
   "devDependencies": {
-    "@tsconfig/node22": "22.0.0",
+    "@tsconfig/node24": "24.0.0",
     "@types/console-log-level": "1.4.5",
     "@types/jest": "30.0.0",
     "@types/node": "20.19.27",
